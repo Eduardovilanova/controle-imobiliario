@@ -68,6 +68,23 @@ const SEED_INVOICES: Invoice[] = []
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 const fmtDate = (d: string) => { const [y,m,day]=d.split("-"); return `${day}/${m}/${y}` }
 const genId = () => Math.random().toString(36).slice(2, 9)
+
+const LS_PREFIX = "controle-imobiliario:"
+function loadLS<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + key)
+    return raw ? (JSON.parse(raw) as T) : fallback
+  } catch {
+    return fallback
+  }
+}
+function saveLS<T>(key: string, value: T) {
+  try {
+    localStorage.setItem(LS_PREFIX + key, JSON.stringify(value))
+  } catch {
+    // localStorage indisponível (modo privado, cota excedida etc.) — segue apenas em memória
+  }
+}
 const initials = (name: string) => name.split(" ").map(n => n[0]).slice(0, 2).join("").toUpperCase()
 
 function calcFine(base: number, daysLate: number, fineRate: number, interestRate: number) {
@@ -2281,15 +2298,23 @@ export default function App() {
     role: session.user.user_metadata?.role || "Administrador",
   } : null
 
-  const [invoices, setInvoices] = useState<Invoice[]>(SEED_INVOICES)
-  const [contracts, setContracts] = useState<Contract[]>(SEED_CONTRACTS)
-  const [tenants, setTenants] = useState<Tenant[]>(SEED_TENANTS)
-  const [properties, setProperties] = useState<Property[]>(SEED_PROPERTIES)
-  const [guarantors, setGuarantors] = useState<Guarantor[]>(SEED_GUARANTORS)
+  const [invoices, setInvoices] = useState<Invoice[]>(() => loadLS("invoices", SEED_INVOICES))
+  const [contracts, setContracts] = useState<Contract[]>(() => loadLS("contracts", SEED_CONTRACTS))
+  const [tenants, setTenants] = useState<Tenant[]>(() => loadLS("tenants", SEED_TENANTS))
+  const [properties, setProperties] = useState<Property[]>(() => loadLS("properties", SEED_PROPERTIES))
+  const [guarantors, setGuarantors] = useState<Guarantor[]>(() => loadLS("guarantors", SEED_GUARANTORS))
 
-  const [trash, setTrash] = useState<TrashItem[]>([])
-  const [log, setLog] = useState<LogEntry[]>([])
+  const [trash, setTrash] = useState<TrashItem[]>(() => loadLS("trash", []))
+  const [log, setLog] = useState<LogEntry[]>(() => loadLS("log", []))
   const [toasts, setToasts] = useState<ToastItem[]>([])
+
+  useEffect(() => { saveLS("invoices", invoices) }, [invoices])
+  useEffect(() => { saveLS("contracts", contracts) }, [contracts])
+  useEffect(() => { saveLS("tenants", tenants) }, [tenants])
+  useEffect(() => { saveLS("properties", properties) }, [properties])
+  useEffect(() => { saveLS("guarantors", guarantors) }, [guarantors])
+  useEffect(() => { saveLS("trash", trash) }, [trash])
+  useEffect(() => { saveLS("log", log) }, [log])
 
   const [showTrash, setShowTrash] = useState(false)
   const [showLog, setShowLog] = useState(false)
